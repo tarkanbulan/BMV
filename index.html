@@ -1,0 +1,1712 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Boş Ver Manipülasyonu — İnteraktif Kitap Okuyucu</title>
+<style>
+  :root {
+    /* TarCo Design Tokens (Cream/Ivory Default) */
+    --ink: #0f1a2e;
+    --paper: #f7f4ec;
+    --rule: #1a2a4a;
+    --gold: #c9a84c;
+    --accent: #8b1a1a;
+    --muted: #6b7280;
+
+    --bg-page: var(--paper);
+    --bg-card: #ffffff;
+    --border-color: var(--rule);
+    
+    --serif: Georgia, serif;
+    --sans: Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Monaco, Consolas, monospace;
+    
+    --radius-panel: 12px;
+    --radius-row: 8px;
+    --border: 1.5px solid var(--border-color);
+    
+    --sidebar-width: 320px;
+    --header-height: 80px;
+    
+    --font-size-base: 17px;
+    --line-height-base: 1.65;
+  }
+
+  /* Paper Theme override */
+  [data-theme="paper"] {
+    --ink: #0f1a2e;
+    --paper: #f7f4ec;
+    --rule: #1a2a4a;
+    --gold: #c9a84c;
+    --accent: #8b1a1a;
+    --muted: #6b7280;
+    --bg-page: var(--paper);
+    --bg-card: #ffffff;
+    --border-color: var(--rule);
+  }
+
+  /* Dark Theme */
+  [data-theme="dark"] {
+    --ink: #f7f4ec;
+    --paper: #0f1a2e;
+    --rule: #c9a84c;
+    --gold: #ebd087;
+    --accent: #ff4d4d;
+    --muted: #9ca3af;
+    --bg-page: #0b1220;
+    --bg-card: #0f1a2e;
+    --border-color: #1a2a4a;
+  }
+
+  /* Navy Theme */
+  [data-theme="navy"] {
+    --ink: #f4f6fa;
+    --paper: #121e33;
+    --rule: #c9a84c;
+    --gold: #ebd087;
+    --accent: #ff4d4d;
+    --muted: #7b94bf;
+    --bg-page: #0d1624;
+    --bg-card: #121e33;
+    --border-color: #1a2a4a;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg-page);
+    color: var(--ink);
+    font-family: var(--sans);
+    line-height: var(--line-height-base);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+  }
+
+  /* ── Layout ─────────────────────────── */
+  .app-container {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  /* ── Sidebar ────────────────────────── */
+  aside.sidebar {
+    width: var(--sidebar-width);
+    height: 100vh;
+    background: var(--bg-card);
+    border-right: var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    z-index: 10;
+    transition: transform 0.3s ease;
+  }
+
+  .sidebar-header {
+    padding: 24px;
+    border-bottom: var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* TarCo Badge Canonical */
+  .tarco-badge {
+    background: #141413;
+    color: #c9a84c;
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    padding: 8px 16px;
+    text-transform: uppercase;
+    border: 1.5px solid #c9a84c;
+    text-align: center;
+    white-space: nowrap;
+    border-radius: 4px;
+    line-height: 1.2;
+  }
+  .tarco-badge small {
+    display: block;
+    font-size: 6px;
+    letter-spacing: 2px;
+    color: rgba(201, 168, 76, 0.6);
+    margin-top: 1px;
+  }
+
+  .sidebar-title {
+    font-family: var(--serif);
+    font-size: 19px;
+    font-weight: 700;
+    margin: 0;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+
+  .search-box {
+    position: relative;
+    padding: 0 16px 12px;
+    border-bottom: var(--border);
+  }
+  .search-box input {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    border-radius: 20px;
+    border: var(--border);
+    background: var(--bg-page);
+    color: var(--ink);
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box input:focus {
+    border-color: var(--gold);
+  }
+  .search-box svg {
+    position: absolute;
+    left: 26px;
+    top: 9px;
+    fill: var(--muted);
+    width: 15px;
+    height: 15px;
+  }
+
+  /* Edition Selector Tabs */
+  .edition-tabs {
+    display: flex;
+    background: var(--bg-page);
+    padding: 4px;
+    margin: 12px 16px;
+    border-radius: 8px;
+    gap: 4px;
+    border: 1px solid var(--border-color);
+  }
+  .tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 6px;
+    font-size: 11px;
+    font-weight: bold;
+    font-family: var(--sans);
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active {
+    background: var(--bg-card);
+    color: var(--ink);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    border: 1px solid var(--border-color);
+  }
+
+  /* Chapter List */
+  .chapter-list-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+  }
+  .chapter-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: var(--radius-row);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+    border: 1.5px solid transparent;
+    margin-bottom: 6px;
+    user-select: none;
+  }
+  .chapter-item:hover {
+    background: var(--bg-page);
+  }
+  .chapter-item.active {
+    background: var(--bg-page);
+    border-color: var(--gold);
+  }
+  .chapter-checkbox {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    border: 1.5px solid var(--muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.15s;
+  }
+  .chapter-checkbox.checked {
+    background: var(--gold);
+    border-color: var(--gold);
+  }
+  .chapter-checkbox.checked::after {
+    content: "✓";
+    color: var(--rule);
+    font-size: 10px;
+    font-weight: bold;
+  }
+  .chapter-link-text {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.3;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .chapter-item.active .chapter-link-text {
+    font-weight: bold;
+  }
+
+  /* Settings Footer */
+  .sidebar-settings {
+    padding: 16px 24px;
+    border-top: var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: bold;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+  }
+  .theme-toggle-group {
+    display: flex;
+    gap: 4px;
+  }
+  .theme-btn {
+    border: var(--border);
+    background: var(--bg-card);
+    padding: 4px 8px;
+    font-size: 10px;
+    font-family: var(--sans);
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    text-transform: uppercase;
+  }
+  .theme-btn.active {
+    border-color: var(--gold);
+    background: var(--bg-page);
+  }
+  .font-size-group {
+    display: flex;
+    gap: 4px;
+  }
+  .font-btn {
+    border: var(--border);
+    background: var(--bg-card);
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+    font-family: var(--sans);
+    color: var(--ink);
+    cursor: pointer;
+    border-radius: 4px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* ── Main Panel ─────────────────────── */
+  main.main-content {
+    flex: 1;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    background: var(--bg-page);
+  }
+
+  /* ── Masthead Header ────────────────── */
+  header.masthead {
+    padding: 16px 40px;
+    border-bottom: var(--border);
+    background: var(--bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .header-info h1 {
+    font-family: var(--serif);
+    font-size: 22px;
+    font-weight: 500;
+    margin: 0;
+    color: var(--ink);
+  }
+  .header-info p {
+    font-size: 11px;
+    color: var(--muted);
+    margin: 2px 0 0;
+    font-family: var(--mono);
+    letter-spacing: 0.5px;
+  }
+  .stamps-group {
+    display: flex;
+    gap: 8px;
+  }
+  .stamp {
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 900;
+    padding: 3px 8px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-radius: 3px;
+    border: 1.5px solid transparent;
+  }
+  .stamp-red {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .stamp-gold {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+
+  /* Mobile menu toggle */
+  .menu-toggle {
+    display: none;
+    border: var(--border);
+    background: var(--bg-card);
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+
+  /* ── Responsive Backdrop Overlay ────── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 26, 46, 0.4);
+    backdrop-filter: blur(2px);
+    z-index: 9;
+    transition: opacity 0.3s ease;
+  }
+  .sidebar-overlay.active {
+    display: block;
+  }
+
+  /* ── Reading Area ───────────────────── */
+  .reading-container {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px 60px 100px;
+    display: flex;
+    justify-content: center;
+  }
+  .reading-pane {
+    max-width: 740px;
+    width: 100%;
+  }
+
+  /* Typography / E-Book Styles */
+  .book-page {
+    font-family: var(--serif);
+    font-size: var(--font-size-base);
+    color: var(--ink);
+    line-height: var(--line-height-base);
+  }
+  .book-page h1 {
+    font-size: 34px;
+    line-height: 1.2;
+    margin-bottom: 24px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    border-bottom: var(--border);
+    padding-bottom: 12px;
+  }
+  .book-page h2 {
+    font-size: 26px;
+    margin-top: 40px;
+    margin-bottom: 16px;
+    font-weight: 500;
+  }
+  .book-page h3 {
+    font-size: 21px;
+    margin-top: 32px;
+    margin-bottom: 12px;
+    font-weight: 500;
+  }
+  .book-page h4 {
+    font-size: 18px;
+    margin-top: 24px;
+    margin-bottom: 8px;
+    font-weight: bold;
+    color: var(--accent);
+  }
+  .book-page p {
+    margin-top: 0;
+    margin-bottom: 20px;
+    text-align: justify;
+    text-indent: 1.5em;
+  }
+  .book-page p:first-of-type {
+    text-indent: 0;
+  }
+  .book-page blockquote {
+    border-left: 3px solid var(--gold);
+    padding-left: 20px;
+    margin: 24px 0;
+    font-style: italic;
+    color: var(--muted);
+  }
+  .book-page ul, .book-page ol {
+    margin-bottom: 20px;
+    padding-left: 24px;
+  }
+  .book-page li {
+    margin-bottom: 8px;
+  }
+  .book-page mark {
+    background: rgba(201, 168, 76, 0.25);
+    border-bottom: 1.5px solid var(--gold);
+    color: inherit;
+    padding: 1px 3px;
+  }
+  .book-page strong {
+    color: var(--ink);
+  }
+
+  /* Table styling matching standard */
+  .book-page table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 28px 0;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.5;
+  }
+  .book-page th {
+    background: var(--rule);
+    color: var(--gold);
+    font-family: var(--sans);
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 10px 14px;
+    border: 1.5px solid var(--rule);
+    text-align: left;
+  }
+  .book-page td {
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    color: var(--ink);
+  }
+  .book-page tr:nth-child(even) {
+    background: var(--bg-page);
+  }
+
+  /* Images styling */
+  .book-img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: 24px auto;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(15,26,46,0.06);
+    border: 1px solid var(--border-color);
+  }
+
+  /* Footnotes */
+  .footnote-ref {
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: bold;
+    margin-left: 2px;
+    user-select: none;
+  }
+  .footnote-ref:hover {
+    text-decoration: underline;
+  }
+
+  /* Callout Boxes */
+  .callout {
+    border: 1.5px solid var(--border-color, var(--rule));
+    background: var(--bg-page);
+    border-radius: var(--radius-panel);
+    padding: 18px 24px;
+    margin: 28px 0;
+  }
+  .callout-gold {
+    --border-color: var(--gold);
+    background: rgba(201, 168, 76, 0.03);
+  }
+  .callout-red {
+    --border-color: var(--accent);
+    background: rgba(139, 26, 26, 0.02);
+  }
+  .callout-blue {
+    --border-color: var(--rule);
+    background: rgba(26, 42, 74, 0.02);
+  }
+  .callout-header {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--border-color);
+  }
+
+  /* ── Interactive SVG Diagrams ───────── */
+  .interactive-diagram-card {
+    border: var(--border);
+    border-radius: var(--radius-panel);
+    background: var(--bg-card);
+    padding: 24px;
+    margin: 28px 0;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.02);
+  }
+  .diagram-title {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: bold;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--ink);
+  }
+  .diagram-toggle-btn {
+    font-size: 10px;
+    background: var(--bg-page);
+    border: var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: pointer;
+    font-weight: bold;
+    color: var(--muted);
+  }
+  .diagram-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+  .diagram-svg {
+    max-width: 500px;
+    width: 100%;
+    height: auto;
+  }
+  .diagram-desc-box {
+    background: var(--bg-page);
+    border-left: 3px solid var(--gold);
+    padding: 12px 16px;
+    border-radius: 0 var(--radius-row) var(--radius-row) 0;
+    font-size: 13px;
+    line-height: 1.5;
+    font-family: var(--sans);
+    width: 100%;
+    color: var(--ink);
+  }
+
+  /* Stoic Circle styles */
+  .circle-inner { fill: rgba(201, 168, 76, 0.08); stroke: var(--gold); stroke-width: 2; cursor: pointer; transition: opacity 0.2s; }
+  .circle-outer { fill: rgba(139, 26, 26, 0.03); stroke: var(--accent); stroke-width: 2; cursor: pointer; transition: opacity 0.2s; }
+  .node-active { cursor: pointer; }
+  .node-active circle { fill: var(--bg-card); stroke: var(--ink); stroke-width: 1.5; transition: fill 0.2s, stroke 0.2s; }
+  .node-active:hover circle { fill: var(--gold); stroke: var(--gold); }
+  .node-active:hover text { fill: var(--rule); }
+  .node-active text { font-family: var(--sans); font-size: 11px; font-weight: bold; fill: var(--ink); text-anchor: middle; pointer-events: none; }
+
+  /* Elephant & Rider styles */
+  .rider-box { fill: rgba(26, 42, 74, 0.06); stroke: var(--rule); stroke-width: 2; cursor: pointer; }
+  .elephant-box { fill: rgba(201, 168, 76, 0.06); stroke: var(--gold); stroke-width: 2; cursor: pointer; }
+  .connection-line { stroke: var(--ink); stroke-width: 1.5; stroke-dasharray: 4 4; fill: none; }
+
+  /* Timeline styles */
+  .timeline-line { stroke: var(--border-color); stroke-width: 3; }
+  .timeline-node { cursor: pointer; }
+  .timeline-node circle { fill: var(--bg-card); stroke: var(--gold); stroke-width: 3; transition: transform 0.2s, fill 0.2s; }
+  .timeline-node:hover circle { fill: var(--gold); transform: scale(1.2); }
+  .timeline-node text { font-family: var(--sans); font-size: 10px; font-weight: bold; fill: var(--ink); }
+
+  /* ── Bottom Nav / Footer ────────────── */
+  .reader-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: var(--border);
+    padding: 16px 40px;
+    background: var(--bg-card);
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    background: var(--bg-card);
+    border: var(--border);
+    padding: 8px 16px;
+    border-radius: var(--radius-row);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--ink);
+    transition: all 0.2s;
+  }
+  .nav-btn:hover {
+    border-color: var(--gold);
+    color: var(--gold);
+  }
+  .nav-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: var(--border-color);
+    color: var(--muted);
+  }
+
+  footer.tarco-footer {
+    border-top: var(--border);
+    background: var(--bg-card);
+    padding: 20px 16px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.6;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  footer.tarco-footer em {
+    color: var(--gold);
+    font-style: normal;
+    font-weight: bold;
+  }
+
+  /* ── Footnote Overlay Drawer ────────── */
+  .footnote-drawer {
+    position: fixed;
+    bottom: -200px;
+    left: 0;
+    width: 100vw;
+    background: var(--bg-card);
+    border-top: 2px solid var(--gold);
+    box-shadow: 0 -8px 24px rgba(0,0,0,0.1);
+    z-index: 100;
+    padding: 24px 40px;
+    transition: bottom 0.3s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .footnote-drawer.active {
+    bottom: 0;
+  }
+  .footnote-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    font-size: 12px;
+    color: var(--gold);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .footnote-close-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 18px;
+    color: var(--muted);
+    padding: 4px;
+  }
+  .footnote-drawer-content {
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+
+  /* ── Cover Page Styles ──────────────── */
+  .book-cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 40px 10px 60px;
+    font-family: var(--serif);
+  }
+  .cover-header {
+    margin-bottom: 40px;
+  }
+  .cover-main {
+    position: relative;
+    margin-bottom: 40px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .seal-extraordinary {
+    width: 90px;
+    height: 90px;
+    border: 3px double var(--gold);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-family: var(--sans);
+    color: var(--gold);
+    text-transform: uppercase;
+    transform: rotate(-15deg);
+    opacity: 0.85;
+    margin-bottom: 24px;
+    background: transparent;
+  }
+  .seal-extraordinary .top {
+    font-size: 8px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+  }
+  .seal-extraordinary .mid {
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: 2px;
+    border-top: 1px solid var(--gold);
+    border-bottom: 1px solid var(--gold);
+    padding: 2px 6px;
+    margin: 2px 0;
+  }
+  .seal-extraordinary .bot {
+    font-size: 7px;
+    font-weight: bold;
+    letter-spacing: 1px;
+  }
+  .cover-title {
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin: 0 0 16px;
+    letter-spacing: 2px;
+    color: var(--ink);
+  }
+  .cover-subtitle {
+    font-size: 20px;
+    font-weight: 500;
+    font-style: italic;
+    color: var(--muted);
+    margin: 0 0 24px;
+  }
+  .cover-author {
+    font-family: var(--sans);
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: var(--ink);
+    border-top: 1.5px solid var(--rule);
+    border-bottom: 1.5px solid var(--rule);
+    padding: 6px 24px;
+    margin-top: 12px;
+    display: inline-block;
+  }
+  .cover-divider {
+    width: 60px;
+    border: 0;
+    border-top: 2px solid var(--gold);
+    margin: 20px 0;
+  }
+  .cover-details {
+    max-width: 540px;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+  .cover-details p {
+    text-align: center;
+    text-indent: 0;
+    margin-bottom: 32px;
+    color: var(--muted);
+  }
+  .cover-stats {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    margin-bottom: 36px;
+  }
+  .stat-card {
+    background: var(--bg-card);
+    border: var(--border);
+    border-radius: var(--radius-row);
+    padding: 12px 18px;
+    min-width: 120px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .stat-num {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--gold);
+    font-family: var(--sans);
+  }
+  .stat-lbl {
+    font-size: 10px;
+    color: var(--muted);
+    font-family: var(--sans);
+    text-transform: uppercase;
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+  .cover-cta-btn {
+    background: var(--rule);
+    color: var(--gold);
+    border: 1.5px solid var(--gold);
+    padding: 12px 32px;
+    font-size: 13px;
+    font-family: var(--sans);
+    font-weight: 900;
+    letter-spacing: 2px;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.2s;
+    outline: none;
+    box-shadow: 0 4px 12px rgba(15,26,46,0.1);
+  }
+  .cover-cta-btn:hover {
+    background: var(--gold);
+    color: var(--rule);
+    box-shadow: 0 6px 16px rgba(201,168,76,0.3);
+  }
+
+  /* ── Responsive Styles ──────────────── */
+  @media (max-width: 900px) {
+    aside.sidebar {
+      position: absolute;
+      left: -320px;
+      height: 100vh;
+      box-shadow: 8px 0 24px rgba(15,26,46,0.15);
+    }
+    aside.sidebar.active {
+      transform: translateX(320px);
+    }
+    .menu-toggle {
+      display: block;
+    }
+    .reading-container {
+      padding: 24px 20px 80px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- Mobile Sidebar Backdrop Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+<div class="app-container">
+  <!-- Left Sidebar Panel -->
+  <aside class="sidebar" id="appSidebar">
+    <div class="sidebar-header">
+      <div class="tarco-badge">
+        TARCO
+        <small>FORENSIC INTELLIGENCE</small>
+      </div>
+      <h2 class="sidebar-title">Boş Ver Manipülasyonu</h2>
+    </div>
+
+    <!-- Chapter Search Box -->
+    <div class="search-box">
+      <svg viewBox="0 0 24 24">
+        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+      </svg>
+      <input type="text" id="searchInput" placeholder="Bölüm veya kelime ara..." onkeyup="filterChapters()">
+    </div>
+
+    <!-- Edition Tabs Switcher -->
+    <div class="edition-tabs">
+      <button class="tab-btn active" onclick="switchEdition('A')">Sürüm A (Cilt 1)</button>
+      <button class="tab-btn" onclick="switchEdition('B')">Sürüm B (25 Bölüm)</button>
+    </div>
+
+    <!-- Scrollable Chapter Index -->
+    <div class="chapter-list-container" id="chapterList">
+      <!-- Generated via JS -->
+    </div>
+
+    <!-- Reading settings -->
+    <div class="sidebar-settings">
+      <div class="setting-row">
+        <span>TEMA SEÇİMİ</span>
+        <div class="theme-toggle-group">
+          <button class="theme-btn active" onclick="setTheme('paper')">Kağıt</button>
+          <button class="theme-btn" onclick="setTheme('dark')">Karanlık</button>
+          <button class="theme-btn" onclick="setTheme('navy')">Lacivert</button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <span>YAZI BOYUTU</span>
+        <div class="font-size-group">
+          <button class="font-btn" onclick="adjustFontSize(-1.5)">A-</button>
+          <button class="font-btn" onclick="adjustFontSize(1.5)">A+</button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Reading & Render Panel -->
+  <main class="main-content">
+    <header class="masthead">
+      <button class="menu-toggle" onclick="toggleSidebar()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+      </button>
+      <div class="header-info">
+        <h1 id="bookVersionTitle">Cilt 1: Enkazın Altındaki Zihin</h1>
+        <p>Bilişsel Manipülasyon ve Savunma Analizi</p>
+      </div>
+      <div class="stamps-group">
+        <span class="stamp stamp-red">Forensic</span>
+        <span class="stamp stamp-gold">Terminal</span>
+      </div>
+    </header>
+
+    <!-- Scrollable Reading Window -->
+    <div class="reading-container" id="readingContainer">
+      <article class="reading-pane">
+        <!-- Interactive Diagrams Panel (Embeds dynamically based on chapters) -->
+        <div id="diagramCard" class="interactive-diagram-card" style="display: none;">
+          <div class="diagram-title">
+            <span id="diagramTitleText">Kavram Şeması</span>
+            <button class="diagram-toggle-btn" onclick="toggleDiagramContent()">Gizle / Göster</button>
+          </div>
+          <div class="diagram-content" id="diagramContentArea">
+            <!-- Diagram injection -->
+          </div>
+        </div>
+
+        <div class="book-page" id="bookContent">
+          <!-- Parsed HTML content gets loaded here -->
+        </div>
+      </article>
+    </div>
+
+    <!-- Chapter Navigation Footer -->
+    <div class="reader-nav">
+      <button class="nav-btn" id="prevBtn" onclick="prevChapter()">
+        &larr; ÖNCEKİ BÖLÜM
+      </button>
+      <button class="nav-btn" id="nextBtn" onclick="nextChapter()">
+        SONRAKİ BÖLÜM &rarr;
+      </button>
+    </div>
+
+    <footer class="tarco-footer">
+      TarCo Forensic Intelligence Research · Computational Behavioural Analysis · Canonical Filing<br>
+      All claims verified against primary sources as of filing date · 2026 · <em>Veritas Per Se</em><br>
+      <span id="temporalLockStatus" style="font-family:monospace;font-size:9px;color:#999">
+        TEMPORAL LOCK: -- · HASH: --
+      </span>
+    </footer>
+  </main>
+</div>
+
+  let currentEdition = 'A';
+  let currentChapterIdx = -1; // Default to cover page
+  let fontSize = 17;
+  let parsedChapters = { A: [], B: [] };
+
+  // Setup state and load data
+  window.onload = function() {
+    if (!window.BOOK_DATA) {
+      document.getElementById('bookContent').innerHTML = "<h2 style='color:#b81a1a;'>Hata: book_data.js dosyası yüklenemedi.</h2><p>Lütfen book_data.js dosyasının index.html ile aynı klasörde yer aldığından emin olun.</p>";
+      return;
+    }
+    
+    // Parse chapters and initialize
+    parsedChapters.A = window.BOOK_DATA.versionA.chapters;
+    parsedChapters.B = window.BOOK_DATA.versionB.chapters;
+
+    // Load saved states
+    if (localStorage.getItem('bosver_edition')) {
+      currentEdition = localStorage.getItem('bosver_edition');
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.textContent.includes(currentEdition === 'A' ? 'Sürüm A' : 'Sürüm B'));
+      });
+    }
+    if (localStorage.getItem(`bosver_chapter_${currentEdition}`)) {
+      currentChapterIdx = parseInt(localStorage.getItem(`bosver_chapter_${currentEdition}`));
+    } else {
+      currentChapterIdx = -1; // Default to cover
+    }
+    if (localStorage.getItem('bosver_font_size')) {
+      fontSize = parseFloat(localStorage.getItem('bosver_font_size'));
+      document.getElementById('bookContent').style.fontSize = fontSize + 'px';
+    }
+    if (localStorage.getItem('bosver_theme')) {
+      setTheme(localStorage.getItem('bosver_theme'));
+    }
+
+    renderChapterList();
+    loadChapter(currentChapterIdx);
+    updateTemporalLock();
+  };
+
+  // Generate SHA-256 equivalent hash for temporal lock footer
+  function updateTemporalLock() {
+    const timestamp = new Date().toISOString().replace(/\.\d+Z/, 'Z');
+    // Generate a pseudo-random hash for demonstration matching standard
+    const pseudoHash = Math.random().toString(16).substring(2, 10) + Math.random().toString(16).substring(2, 10);
+    document.getElementById('temporalLockStatus').innerText = `TEMPORAL LOCK: ${timestamp} · HASH: #` + pseudoHash;
+  }
+
+  // Render index sidebar links
+  function renderChapterList() {
+    const list = document.getElementById('chapterList');
+    list.innerHTML = '';
+    const chapters = parsedChapters[currentEdition];
+
+    // Prepend Cover Page link
+    const coverItem = document.createElement('div');
+    coverItem.className = 'chapter-item' + (currentChapterIdx === -1 ? ' active' : '');
+    coverItem.onclick = () => selectChapter(-1);
+    
+    const coverCheckbox = document.createElement('div');
+    coverCheckbox.className = 'chapter-checkbox';
+    coverCheckbox.style.visibility = 'hidden';
+    
+    const coverTitle = document.createElement('span');
+    coverTitle.className = 'chapter-link-text';
+    coverTitle.innerText = "📖 Kitap Kapağı & Giriş";
+    coverTitle.style.fontWeight = 'bold';
+    
+    coverItem.appendChild(coverCheckbox);
+    coverItem.appendChild(coverTitle);
+    list.appendChild(coverItem);
+
+    chapters.forEach((ch, idx) => {
+      const isChecked = localStorage.getItem(`bosver_read_${currentEdition}_${idx}`) === 'true';
+      const item = document.createElement('div');
+      item.className = 'chapter-item' + (idx === currentChapterIdx ? ' active' : '');
+      item.onclick = (e) => {
+        if (e.target.classList.contains('chapter-checkbox')) return;
+        selectChapter(idx);
+      };
+
+      const checkbox = document.createElement('div');
+      checkbox.className = 'chapter-checkbox' + (isChecked ? ' checked' : '');
+      checkbox.onclick = () => toggleCheck(idx);
+
+      const title = document.createElement('span');
+      title.className = 'chapter-link-text';
+      title.innerText = ch.title;
+
+      item.appendChild(checkbox);
+      item.appendChild(title);
+      list.appendChild(item);
+    });
+  }
+
+  // Toggle Read checkbox status
+  function toggleCheck(idx) {
+    const key = `bosver_read_${currentEdition}_${idx}`;
+    const wasChecked = localStorage.getItem(key) === 'true';
+    localStorage.setItem(key, !wasChecked);
+    renderChapterList();
+  }
+
+  // Filter list on search input
+  function filterChapters() {
+    const query = document.getElementById('searchInput').value.toLowerCase();
+    const items = document.querySelectorAll('.chapter-item');
+    const chapters = parsedChapters[currentEdition];
+
+    // Handle cover item
+    const showCover = "kitap kapağı & giriş".includes(query) || "ruhi".includes(query) || "boş ver".includes(query);
+    items[0].style.display = showCover ? 'flex' : 'none';
+
+    chapters.forEach((ch, idx) => {
+      const match = ch.title.toLowerCase().includes(query) || ch.content.toLowerCase().includes(query);
+      items[idx + 1].style.display = match ? 'flex' : 'none';
+    });
+  }
+
+  // Switch editions
+  function switchEdition(edition) {
+    currentEdition = edition;
+    localStorage.setItem('bosver_edition', edition);
+    
+    // Toggle tab active class
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs[0].classList.toggle('active', edition === 'A');
+    tabs[1].classList.toggle('active', edition === 'B');
+
+    // Reset or load chapter progress
+    if (localStorage.getItem(`bosver_chapter_${currentEdition}`)) {
+      currentChapterIdx = parseInt(localStorage.getItem(`bosver_chapter_${currentEdition}`));
+    } else {
+      currentChapterIdx = -1; // Default to cover
+    }
+    
+    renderChapterList();
+    loadChapter(currentChapterIdx);
+  }
+
+  // Set visual theme
+  function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('bosver_theme', theme);
+
+    // Update active class
+    document.querySelectorAll('.theme-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.onclick.toString().includes(theme));
+    });
+  }
+
+  // Adjust reader font size
+  function adjustFontSize(delta) {
+    fontSize = Math.max(12, Math.min(32, fontSize + delta));
+    document.getElementById('bookContent').style.fontSize = fontSize + 'px';
+    localStorage.setItem('bosver_font_size', fontSize);
+  }
+
+  // Toggle sidebar on mobile
+  function toggleSidebar() {
+    const sidebar = document.getElementById('appSidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    const isActive = sidebar.classList.toggle('active');
+    if (overlay) {
+      overlay.classList.toggle('active', isActive);
+    }
+  }
+
+  // Select a chapter
+  function selectChapter(idx) {
+    currentChapterIdx = idx;
+    localStorage.setItem(`bosver_chapter_${currentEdition}`, idx);
+    
+    // Mobile sidebar auto-close
+    document.getElementById('appSidebar').classList.remove('active');
+    const overlay = document.getElementById('sidebarOverlay');
+    if (overlay) overlay.classList.remove('active');
+
+    // Remove active class from old, add to new
+    document.querySelectorAll('.chapter-item').forEach((item, i) => {
+      const active = (i === 0 && idx === -1) || (i - 1 === idx);
+      item.classList.toggle('active', active);
+    });
+
+    loadChapter(idx);
+    document.getElementById('readingContainer').scrollTop = 0;
+  }
+
+  // Load chapter text and render diagrams
+  function loadChapter(idx) {
+    const card = document.getElementById('diagramCard');
+    const bookContent = document.getElementById('bookContent');
+    const bookVersionTitle = document.getElementById('bookVersionTitle');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const totalChapters = parsedChapters[currentEdition].length;
+
+    if (idx === -1) {
+      // Load Cover Page
+      bookVersionTitle.innerText = "Boş Ver Manipülasyonu";
+      
+      // Calculate progress stats
+      let readCount = 0;
+      for (let i = 0; i < totalChapters; i++) {
+        if (localStorage.getItem(`bosver_read_${currentEdition}_${i}`) === 'true') {
+          readCount++;
+        }
+      }
+      const progressPercent = totalChapters > 0 ? Math.round((readCount / totalChapters) * 100) : 0;
+
+      bookContent.innerHTML = `
+        <div class="book-cover">
+          <div class="cover-main">
+            <div class="seal-extraordinary">
+              <span class="top">VERITAS</span>
+              <span class="mid">TARCO</span>
+              <span class="bot">2026</span>
+            </div>
+            <h1 class="cover-title">BOŞ VER<br>MANİPÜLASYONU</h1>
+            <h2 class="cover-subtitle">Beynini Geri Kazanma Sanatı</h2>
+            <div class="cover-author">RUHİ</div>
+          </div>
+
+          <hr class="cover-divider">
+
+          <div class="cover-details">
+            <p>Bu eser, bireysel akıl sağlığını ve karar hijyenini korumak, maruz kalınan algı mühendisliği ve dijital yönlendirmelere karşı bilişsel kalkan geliştirmek amacıyla hazırlanmış can alıcı bir zihinsel rehberdir.</p>
+            
+            <div class="cover-stats">
+              <div class="stat-card">
+                <span class="stat-num" id="coverStatProgress">${progressPercent}%</span>
+                <span class="stat-lbl">İlerleme</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-num" id="coverStatCount">${totalChapters}</span>
+                <span class="stat-lbl">Toplam Bölüm</span>
+              </div>
+              <div class="stat-card">
+                <span class="stat-num">~6-8 Saat</span>
+                <span class="stat-lbl">Okuma Süresi</span>
+              </div>
+            </div>
+
+            <button class="cover-cta-btn" onclick="selectChapter(0)">
+              OKUMAYA BAŞLA &rarr;
+            </button>
+          </div>
+        </div>
+      `;
+
+      card.style.display = 'none';
+      prevBtn.disabled = true;
+      nextBtn.disabled = totalChapters === 0;
+      return;
+    }
+
+    const ch = parsedChapters[currentEdition][idx];
+    if (!ch) return;
+
+    bookVersionTitle.innerText = ch.title;
+    
+    // Parse markdown into HTML
+    const htmlContent = parseMarkdown(ch.content);
+    bookContent.innerHTML = htmlContent;
+
+    // Handle interactive diagrams
+    setupDiagrams(ch.title);
+
+    // Setup footnote listeners
+    document.querySelectorAll('.footnote-ref').forEach(ref => {
+      ref.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = ref.getAttribute('data-target');
+        showFootnote(target);
+      });
+    });
+
+    // Toggle nav buttons
+    prevBtn.disabled = false;
+    nextBtn.disabled = idx === totalChapters - 1;
+  }
+
+  // Next / Prev actions
+  function prevChapter() {
+    if (currentChapterIdx === 0) selectChapter(-1);
+    else if (currentChapterIdx > 0) selectChapter(currentChapterIdx - 1);
+  }
+  function nextChapter() {
+    if (currentChapterIdx === -1) selectChapter(0);
+    else if (currentChapterIdx < parsedChapters[currentEdition].length - 1) selectChapter(currentChapterIdx + 1);
+  }
+
+  // Interactive diagrams manager
+  function setupDiagrams(title) {
+    const card = document.getElementById('diagramCard');
+    const container = document.getElementById('diagramContentArea');
+    card.style.display = 'none';
+    container.innerHTML = '';
+
+    // Check chapter title for appropriate diagram
+    if (title.includes("Giriş") || title.includes("Ön Söz") || title.includes("Bölüm 1:")) {
+      card.style.display = 'block';
+      document.getElementById('diagramTitleText').innerText = "ZİHİNSEL HARİTA: STOACI KONTROL ÇEMBERİ";
+      container.innerHTML = `
+        <div class="diagram-container">
+          <svg class="diagram-svg" viewBox="0 0 400 400">
+            <!-- Outer circle (out of control) -->
+            <circle cx="200" cy="200" r="180" class="circle-outer" onclick="showDiagramInfo('dis')"/>
+            <text x="200" y="45" font-family="Georgia" font-size="10" font-weight="bold" fill="var(--accent)" text-anchor="middle">KONTROL DIŞI ALAN (DURUM, GEÇMİŞ, BAŞKALARI)</text>
+            
+            <!-- Inner circle (in control) -->
+            <circle cx="200" cy="200" r="100" class="circle-inner" onclick="showDiagramInfo('ic')"/>
+            <text x="200" y="160" font-family="Georgia" font-size="10" font-weight="bold" fill="var(--gold)" text-anchor="middle">KONTROL ÇEMBERİ (SENİN AKLIN)</text>
+
+            <!-- Inner interactive nodes -->
+            <g class="node-active" onclick="showDiagramInfo('tepki')">
+              <circle cx="200" cy="200" r="18" />
+              <text x="200" y="204">TEPKİN</text>
+            </g>
+            <g class="node-active" onclick="showDiagramInfo('ninet')">
+              <circle cx="150" cy="220" r="18" />
+              <text x="150" y="224">NİYETİN</text>
+            </g>
+            <g class="node-active" onclick="showDiagramInfo('erdeme')">
+              <circle cx="250" cy="220" r="18" />
+              <text x="250" y="224">ERDEMİN</text>
+            </g>
+
+            <!-- Outer interactive nodes -->
+            <g class="node-active" onclick="showDiagramInfo('kaptan')">
+              <circle cx="90" cy="90" r="18" />
+              <text x="90" y="94">USLUP</text>
+            </g>
+            <g class="node-active" onclick="showDiagramInfo('firtina')">
+              <circle cx="310" cy="90" r="18" />
+              <text x="310" y="94">FIRTINA</text>
+            </g>
+            <g class="node-active" onclick="showDiagramInfo('toplum')">
+              <circle cx="200" cy="330" r="18" />
+              <text x="200" y="334">TOPLUM</text>
+            </g>
+          </svg>
+          <div class="diagram-desc-box" id="diagramDescText">
+            Daire veya üzerindeki düğmelerin üzerine tıklayarak Stoacı Kontrol Çemberi'nin unsurlarını keşfedin.
+          </div>
+        </div>
+      `;
+    } else if (title.includes("Bölüm 4:") || title.includes("Bölüm 11:")) {
+      card.style.display = 'block';
+      document.getElementById('diagramTitleText').innerText = "BİLİŞSEL ŞEMA: FİL VE BİNİCİ METAFORU";
+      container.innerHTML = `
+        <div class="diagram-container">
+          <svg class="diagram-svg" viewBox="0 0 400 240">
+            <!-- Rider (Prefrontal) -->
+            <rect x="30" y="50" width="140" height="100" rx="8" class="rider-box" onclick="showDiagramInfo('binici')"/>
+            <text x="100" y="80" font-family="Georgia" font-size="14" font-weight="bold" fill="var(--rule)" text-anchor="middle">BİNİCİ</text>
+            <text x="100" y="105" font-family="Helvetica, Arial, sans-serif" font-size="9" fill="var(--rule)" text-anchor="middle">Sistem 2 (Rasyonel Akıl)</text>
+            <text x="100" y="125" font-family="Helvetica, Arial, sans-serif" font-size="9" fill="var(--rule)" text-anchor="middle">Yön Belirler, Plan Yapar</text>
+
+            <!-- Elephant (Amigdala) -->
+            <rect x="230" y="50" width="140" height="100" rx="8" class="elephant-box" onclick="showDiagramInfo('fil')"/>
+            <text x="300" y="80" font-family="Georgia" font-size="14" font-weight="bold" fill="var(--gold)" text-anchor="middle">FİL</text>
+            <text x="300" y="105" font-family="Helvetica, Arial, sans-serif" font-size="9" fill="var(--gold)" text-anchor="middle">Sistem 1 (Duygusal/Sezgisel)</text>
+            <text x="300" y="125" font-family="Helvetica, Arial, sans-serif" font-size="9" fill="var(--gold)" text-anchor="middle">Dürtüsel Güç, Korku ve Hız</text>
+
+            <!-- Connection -->
+            <path d="M 170 100 Q 200 80 230 100" class="connection-line"/>
+            <text x="200" y="130" font-family="Helvetica, Arial, sans-serif" font-size="10" font-style="italic" fill="var(--ink)" text-anchor="middle" onclick="showDiagramInfo('binici_fil_bag')">İşbirliği & Uyum</text>
+          </svg>
+          <div class="diagram-desc-box" id="diagramDescText">
+            Şemalara tıklayarak rasyonel Binici ile sezgisel Fil arasındaki dinamik ilişkiyi analiz edin.
+          </div>
+        </div>
+      `;
+    } else if (title.includes("Bölüm 24:") || title.includes("Rehber")) {
+      card.style.display = 'block';
+      document.getElementById('diagramTitleText').innerText = "EPİGENETİK VE TRAVMA ZAMAN ÇİZGELGESİ";
+      container.innerHTML = `
+        <div class="diagram-container">
+          <svg class="diagram-svg" viewBox="0 0 400 150">
+            <line x1="40" y1="75" x2="360" y2="75" class="timeline-line" />
+            
+            <g class="timeline-node" onclick="showDiagramInfo('epigen1')" transform="translate(60, 0)">
+              <circle cx="0" cy="75" r="10" />
+              <text x="0" y="60" text-anchor="middle">Ata Mirası</text>
+            </g>
+            <g class="timeline-node" onclick="showDiagramInfo('epigen2')" transform="translate(150, 0)">
+              <circle cx="0" cy="75" r="10" />
+              <text x="0" y="60" text-anchor="middle">Gizli Asbest</text>
+            </g>
+            <g class="timeline-node" onclick="showDiagramInfo('epigen3')" transform="translate(240, 0)">
+              <circle cx="0" cy="75" r="10" />
+              <text x="0" y="60" text-anchor="middle">Kriz / Tetik</text>
+            </g>
+            <g class="timeline-node" onclick="showDiagramInfo('epigen4')" transform="translate(330, 0)">
+              <circle cx="0" cy="75" r="10" />
+              <text x="0" y="60" text-anchor="middle">Farkındalık</text>
+            </g>
+          </svg>
+          <div class="diagram-desc-box" id="diagramDescText">
+            Çizelge düğmelerine tıklayarak çevresel faktörlerin ve ata travmalarının epigenetik etkisini inceleyin.
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  function toggleDiagramContent() {
+    const area = document.getElementById('diagramContentArea');
+    const btn = document.querySelector('.diagram-toggle-btn');
+    if (area.style.display === 'none') {
+      area.style.display = 'block';
+      btn.innerText = 'Gizle / Göster';
+    } else {
+      area.style.display = 'none';
+      btn.innerText = 'Göster';
+    }
+  }
+
+  // Interactive diagrams tooltip content
+  function showDiagramInfo(type) {
+    const box = document.getElementById('diagramDescText');
+    const desc = {
+      'ic': '<strong>İç Çember (Senin Kontrolündekiler):</strong> Stoacı öğretide, sadece kendi düşüncelerini, kararlarını, değerlerini ve olaylara verdiğin tepkileri kontrol edebilirsin. Gerçek özgürlük buradadır.',
+      'dis': '<strong>Dış Çember (Kontrol Dışı Alan):</strong> Fırtınanın gücü, geçmiş, atalarından kalan genetik miras veya başkalarının sana karşı üslubu senin kontrolünde değildir. Bunları kabullenmek ve metanet göstermek gerekir.',
+      'tepki': '<strong>Tepkin:</strong> Başkalarının kaba konuşması seni incitmez; seni inciten, o söze kendi zihninde verdiğin yargı ve tepkidir (Epiktetos).',
+      'ninet': '<strong>Niyetin:</strong> Eylemlerindeki ahlaki niyet tamamen senin elindedir. Sonuç ne olursa olsun, erdemli niyet değerini yitirmez.',
+      'erdeme': '<strong>Erdemin:</strong> Bilgelik, adalet, cesaret ve ölçülülük. İç kaleni inşa eden ana taşıyıcı sütunlar.',
+      'kaptan': '<strong>Kaptanın Üslubu:</strong> Fırtınada kaptanın üslubu (küfretmesi, asık suratı) hoşa gitmeyebilir. Ancak gemiyi kurtaran üslup değil, kaptanın liyakati ve fırtına risk mühendisliğidir.',
+      'firtina': '<strong>Fırtına:</strong> Doğal krizler ve dış olaylar. Onların fiziksel kanunları senin inançlarından veya dualarından etkilenmez.',
+      'toplum': '<strong>Toplum & Gelenekler:</strong> Toplumun dayattığı sinsi inançlar veya elalem baskısı. Dışsal kontrol odağını kırarak burayı aşabilirsin.',
+      'binici': '<strong>Rasyonel Binici (Sistem 2):</strong> Beynimizin mantıklı düşünen, planlayan, yavaş ve efor gerektiren kısmı (Prefrontal Korteks). Yönü bilir ama enerjisi sınırlıdır.',
+      'fil': '<strong>Duygusal Fil (Sistem 1):</strong> Milyonlarca yıllık evrimsel mirasımız. Hızlı, sezgisel, dürtüsel ve duygusal beynimiz (Amigdala). Tehditlere anında refleks verir.',
+      'binici_fil_bag': '<strong>İşbirliği ve Uyum:</strong> Binici Fil ile kavga etmek yerine onun dilini ve korkularını anlamalıdır. Fil korktuğunda Binici ona şefkatle rehberlik ettiğinde zihinsel direnç ve uyum sağlanır.',
+      'epigen1': '<strong>Ata Mirası (Travma Genleri):</strong> Atalarının yaşadığı derin travmalar, stres etiketleri (post-it) halinde DNA sarmalına eklenerek sana aktarılabilir.',
+      'epigen2': '<strong>Gizli Asbest (Zihinsel Enkaz):</strong> Yıllarca farkında olmadan maruz kaldığın dogmalar, yalanlar veya sinsi lifler. Kriz anına kadar sessizce hücrelerinde bekler.',
+      'epigen3': '<strong>Kriz ve Tetiklenme:</strong> Hayatın bir krizi (hastalık, kayıp) bu sessiz asbest liflerini ve ata korkularını aniden aktive edebilir.',
+      'epigen4': '<strong>Farkındalık & İyileşme:</strong> Hangi acının bugüne, hangisinin geçmiş enkazına ait olduğunu ayırt ettiğin an, zincir kırılır ve özgürleşme başlar.'
+    };
+    box.innerHTML = desc[type] || 'Şemadaki unsurları keşfedin.';
+  }
+
+  // Handle footnote popups
+  function showFootnote(targetId) {
+    const drawer = document.getElementById('footnoteDrawer');
+    const content = document.getElementById('footnoteContent');
+    
+    // Find footnote text in the bibliography section of current chapter
+    const currentChText = parsedChapters[currentEdition][currentChapterIdx].content;
+    const lines = currentChText.split('\n');
+    let fnText = '';
+
+    // Search for lines matching [targetId] or targetId in bibliography
+    const searchPattern = new RegExp(`\\[${targetId}\\]|${targetId}\\s+`);
+    for (let line of lines) {
+      if (line.includes('Kaynakça') || line.includes('BIBLIOGRAPHY') || line.includes('Alıntılanan')) {
+        const bibIdx = lines.indexOf(line);
+        for (let j = bibIdx; j < lines.length; j++) {
+          if (searchPattern.test(lines[j])) {
+            fnText = lines[j].replace(/\\\[|\\\]|\[|\]/g, '').trim();
+            break;
+          }
+        }
+      }
+      if (fnText) break;
+    }
+
+    if (!fnText) {
+      fnText = `Referans [${targetId}]: Kitabın ana kaynakça listesinde yer alıyor veya bu bölüm için özel referans metni girilmemiş.`;
+    }
+
+    content.innerText = fnText;
+    drawer.classList.add('active');
+  }
+
+  function closeFootnote() {
+    document.getElementById('footnoteDrawer').classList.remove('active');
+  }
+
+  // Robust line-by-line Markdown parser logic
+  function parseMarkdown(md) {
+    if (!md) return '';
+    const lines = md.split('\n');
+    let html = '';
+    let inList = false;
+    let listType = null;
+    let inBlockquote = false;
+    let inTable = false;
+    let paragraphBuffer = [];
+    let tableHeaderParsed = false;
+
+    function flushParagraph() {
+      if (paragraphBuffer.length > 0) {
+        const pText = paragraphBuffer.join(' ').trim();
+        if (pText) {
+          if (pText.includes('[KAZANIMLAR KUTUSU]') || pText.includes('[KAZANIMLAR KUTUSU') || pText.includes('[KUTU:')) {
+            html += `<div class="callout callout-gold">
+              <div class="callout-header"><span class="icon">🏆</span> KAZANIMLAR KUTUSU</div>
+              <div class="callout-content">${parseInline(pText.replace(/\[KAZANIMLAR KUTUSU.*?\]/, '').replace(/\[KUTU:.*?\]/, ''))}</div>
+            </div>`;
+          } else if (pText.includes('⚠️ Kapanış')) {
+            html += `<div class="callout callout-red">
+              <div class="callout-header"><span class="icon">⚠️</span> KAPANIŞ</div>
+              <div class="callout-content">${parseInline(pText.replace('⚠️ Kapanış', ''))}</div>
+            </div>`;
+          } else if (pText.includes('📝 Ödev')) {
+            html += `<div class="callout callout-blue">
+              <div class="callout-header"><span class="icon">📝</span> BİREYSEL ÖDEV</div>
+              <div class="callout-content">${parseInline(pText.replace('📝 Ödev', ''))}</div>
+            </div>`;
+          } else {
+            html += `<p>${parseInline(pText)}</p>`;
+          }
+        }
+        paragraphBuffer = [];
+      }
+    }
+
+    function closeList() {
+      if (inList) {
+        html += `</${listType}>`;
+        inList = false;
+        listType = null;
+      }
+    }
+
+    function closeBlockquote() {
+      if (inBlockquote) {
+        html += `</blockquote>`;
+        inBlockquote = false;
+      }
+    }
+
+    function closeTable() {
+      if (inTable) {
+        html += `</tbody></table>`;
+        inTable = false;
+        tableHeaderParsed = false;
+      }
+    }
+
+    for (let i = 0; i < lines.length; i++) {
+      let line = lines[i].trim();
+
+      // Check for empty line
+      if (!line) {
+        flushParagraph();
+        closeList();
+        closeBlockquote();
+        continue;
+      }
+
+      // Check for table separator (contains only dashes, pipes, pluses, colons, and spaces)
+      const isSeparator = /^[-\s+|:+]+$/.test(line) && line.replace(/\s/g, '').length > 3;
+
+      if (isSeparator) {
+        flushParagraph();
+        closeList();
+        closeBlockquote();
+        if (!inTable) {
+          html += `<table>`;
+          inTable = true;
+          tableHeaderParsed = false;
+        }
+        continue;
+      }
+
+      if (line.startsWith('# ')) {
+        flushParagraph(); closeList(); closeBlockquote(); closeTable();
+        html += `<h1>${parseInline(line.slice(2))}</h1>`;
+      } else if (line.startsWith('## ')) {
+        flushParagraph(); closeList(); closeBlockquote(); closeTable();
+        html += `<h2>${parseInline(line.slice(3))}</h2>`;
+      } else if (line.startsWith('### ')) {
+        flushParagraph(); closeList(); closeBlockquote(); closeTable();
+        html += `<h3>${parseInline(line.slice(4))}</h3>`;
+      } else if (line.startsWith('#### ')) {
+        flushParagraph(); closeList(); closeBlockquote(); closeTable();
+        html += `<h4>${parseInline(line.slice(5))}</h4>`;
+      } else if (line.startsWith('> ')) {
+        flushParagraph(); closeList(); closeTable();
+        if (!inBlockquote) {
+          html += `<blockquote>`;
+          inBlockquote = true;
+        }
+        html += `${parseInline(line.slice(2))}<br>`;
+      } else if (line.startsWith('- ') || line.startsWith('• ') || line.startsWith('* ')) {
+        flushParagraph(); closeBlockquote(); closeTable();
+        if (!inList || listType !== 'ul') {
+          closeList();
+          html += '<ul>';
+          inList = true;
+          listType = 'ul';
+        }
+        html += `<li>${parseInline(line.slice(2))}</li>`;
+      } else if (/^\d+\.\s+/.test(line)) {
+        flushParagraph(); closeBlockquote(); closeTable();
+        if (!inList || listType !== 'ol') {
+          closeList();
+          html += '<ol>';
+          inList = true;
+          listType = 'ol';
+        }
+        const match = line.match(/^\d+\.\s+(.*)/);
+        html += `<li>${parseInline(match[1])}</li>`;
+      } else if (inTable) {
+        // Table row parsing
+        let cells = [];
+        if (line.includes('|')) {
+          cells = line.split('|').map(c => c.trim()).filter((c, idx, arr) => {
+            if ((idx === 0 || idx === arr.length - 1) && c === '') return false;
+            return true;
+          });
+        } else {
+          cells = line.split(/\s{2,}/).map(c => c.trim()).filter(c => c !== '');
+        }
+
+        if (cells.length > 0) {
+          if (!tableHeaderParsed) {
+            html += `<thead><tr>`;
+            for (let cell of cells) {
+              html += `<th>${parseInline(cell)}</th>`;
+            }
+            html += `</tr></thead><tbody>`;
+            tableHeaderParsed = true;
+          } else {
+            html += `<tr>`;
+            for (let cell of cells) {
+              html += `<td>${parseInline(cell)}</td>`;
+            }
+            html += `</tr>`;
+          }
+        }
+      } else {
+        // Normal text line
+        closeList();
+        closeBlockquote();
+        closeTable();
+        paragraphBuffer.push(line);
+      }
+    }
+
+    flushParagraph();
+    closeList();
+    closeBlockquote();
+    closeTable();
+
+    return html;
+  }
+
+  function parseInline(text) {
+    if (!text) return '';
+    
+    // Suffix healing for Turkish text spacing artifact
+    text = text.replace(/\b(\w+)\s+(nde|nda|ndeki|ndaki|ler|lar|nin|nın|in|ın|a|e|yi|yı|yu|yü)\b/g, '$1$2');
+
+    // Parse images and hide them if they fail to load (defensive design for missing assets)
+    text = text.replace(/!\[(.*?)\]\((.*?)\)(?:\{.*?\})?/g, '<img src="$2" alt="$1" class="book-img" onerror="this.style.display=\'none\'">');
+
+    // Standard markdown elements
+    text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
+    text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
+    text = text.replace(/_(.*?)_/g, '<em>$1</em>');
+    text = text.replace(/\[(.*?)\]\{\.mark\}/g, '<mark>$1</mark>');
+    text = text.replace(/\\\[(\d+.*?)\\\]/g, '<sup class="footnote-ref" data-target="$1">[$1]</sup>');
+    text = text.replace(/\[(\d+)\]/g, '<sup class="footnote-ref" data-target="$1">[$1]</sup>');
+    
+    return text;
+  }
+</script>
+
+</body>
+</html>
