@@ -918,6 +918,167 @@
       padding: 24px 20px 80px;
     }
   }
+
+  /* Slide Viewer Styles */
+  .slide-container {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .slide-frame {
+    position: relative;
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-panel);
+    border: var(--border);
+    overflow: hidden;
+    background: #000;
+  }
+  .slide-img {
+    width: 100%;
+    height: auto;
+    max-height: 420px;
+    object-fit: contain;
+    display: block;
+    user-select: none;
+    transition: opacity 0.15s ease-in-out;
+  }
+  .slide-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(15, 26, 46, 0.6);
+    color: #f7f4ec;
+    border: 1.5px solid var(--border-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: bold;
+    z-index: 5;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .slide-nav-btn:hover {
+    background: var(--gold);
+    color: var(--rule);
+    border-color: var(--gold);
+  }
+  .slide-nav-prev { left: 12px; }
+  .slide-nav-next { right: 12px; }
+  .slide-indicator {
+    font-family: var(--sans);
+    font-size: 11px;
+    font-weight: 900;
+    color: var(--gold);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .slide-dots {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    padding: 2px 8px;
+    max-height: 45px;
+    overflow-y: auto;
+  }
+  .slide-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    cursor: pointer;
+    border: none;
+    opacity: 0.5;
+    transition: all 0.2s;
+  }
+  .slide-dot.active {
+    background: var(--gold);
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  
+  /* Fullscreen Slide Overlay */
+  .fullscreen-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(10, 18, 32, 0.98);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .fullscreen-frame {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 92vw;
+    height: 82vh;
+    position: relative;
+  }
+  .fullscreen-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-row);
+    border: 2px solid var(--border-color);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  }
+  .fullscreen-close {
+    position: absolute;
+    top: 24px;
+    right: 24px;
+    background: transparent;
+    border: none;
+    font-size: 36px;
+    cursor: pointer;
+    font-weight: 300;
+    line-height: 1;
+    z-index: 10005;
+    color: white;
+  }
+  .fullscreen-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    border: 1.5px solid rgba(255,255,255,0.2);
+    border-radius: 50%;
+    width: 54px;
+    height: 54px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    z-index: 10002;
+    transition: all 0.2s;
+    outline: none;
+  }
+  .fullscreen-nav-btn:hover {
+    background: var(--gold);
+    color: var(--rule);
+    border-color: var(--gold);
+  }
 </style>
 </head>
 <body>
@@ -998,6 +1159,31 @@
     <!-- Scrollable Reading Window -->
     <div class="reading-container" id="readingContainer">
       <article class="reading-pane">
+        <!-- Slide Viewer Panel -->
+        <div id="slidesCard" class="interactive-diagram-card" style="display: none; border-color: var(--gold);">
+          <div class="diagram-title">
+            <span style="color: var(--gold); display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+              GÖRSEL SLAYTLAR VE SUNUM
+            </span>
+            <div style="display: flex; gap: 8px;">
+              <button class="diagram-toggle-btn" onclick="openFullScreenSlides()" style="border-color: var(--gold); color: var(--gold);">Tam Ekran</button>
+              <button class="diagram-toggle-btn" onclick="toggleSlidesContent()">Gizle / Göster</button>
+            </div>
+          </div>
+          <div class="diagram-content" id="slidesContentArea">
+            <div class="slide-container">
+              <div class="slide-frame">
+                <button class="slide-nav-btn slide-nav-prev" onclick="prevSlide(event)">&larr;</button>
+                <img id="slideImage" src="" alt="Slayt" class="slide-img" onclick="openFullScreenSlides()" style="cursor:zoom-in" />
+                <button class="slide-nav-btn slide-nav-next" onclick="nextSlide(event)">&rarr;</button>
+              </div>
+              <div class="slide-indicator" id="slideIndicator">Slayt 1 / 10</div>
+              <div class="slide-dots" id="slideDots"></div>
+            </div>
+          </div>
+        </div>
+
         <!-- Interactive Diagrams Panel (Embeds dynamically based on chapters) -->
         <div id="diagramCard" class="interactive-diagram-card" style="display: none;">
           <div class="diagram-title">
@@ -1289,6 +1475,8 @@
       `;
 
       card.style.display = 'none';
+      const slidesCard = document.getElementById('slidesCard');
+      if (slidesCard) slidesCard.style.display = 'none';
       prevBtn.disabled = true;
       nextBtn.disabled = totalChapters === 0;
       return;
@@ -1305,6 +1493,9 @@
 
     // Handle interactive diagrams
     setupDiagrams(ch.title);
+    
+    // Initialize slides for the chapter
+    initSlidesForChapter(currentEdition, idx);
 
     // Setup footnote listeners
     document.querySelectorAll('.footnote-ref').forEach(ref => {
@@ -1708,7 +1899,169 @@
     
     return text;
   }
+
+  // ── Slide Viewer Logic ────────────────
+  const SLIDE_MAPS = {
+    'A': {
+      1: { key: 'ch1', pages: 20 },
+      2: { key: 'ch2', pages: 22 },
+      3: { key: 'ch3', pages: 15 },
+      4: { key: 'ch4', pages: 23 },
+      5: { key: 'ch5', pages: 25 },
+      6: { key: 'ch6', pages: 25 },
+      7: { key: 'ch7', pages: 24 },
+      8: { key: 'ch8', pages: 20 }
+    },
+    'B': {
+      0: { key: 'ch1', pages: 20 },
+      2: { key: 'ch2', pages: 22 },
+      3: { key: 'ch3', pages: 15 },
+      23: { key: 'ch5', pages: 25 },
+      25: { key: 'ch8', pages: 20 }
+    }
+  };
+
+  let currentSlideIdx = 1;
+  let currentSlideMax = 0;
+  let currentSlideKey = '';
+
+  function initSlidesForChapter(edition, chIdx) {
+    const card = document.getElementById('slidesCard');
+    if (!card) return;
+
+    const mapping = SLIDE_MAPS[edition] && SLIDE_MAPS[edition][chIdx];
+    if (mapping) {
+      currentSlideKey = mapping.key;
+      currentSlideMax = mapping.pages;
+      currentSlideIdx = 1;
+      card.style.display = 'block';
+      updateSlideDisplay();
+    } else {
+      card.style.display = 'none';
+      currentSlideKey = '';
+      currentSlideMax = 0;
+    }
+  }
+
+  function updateSlideDisplay() {
+    if (!currentSlideKey) return;
+    const imgPath = `images/slides/${currentSlideKey}/page_${currentSlideIdx}.jpg`;
+    
+    // Update main container
+    const imgEl = document.getElementById('slideImage');
+    if (imgEl) imgEl.src = imgPath;
+    
+    const indicatorEl = document.getElementById('slideIndicator');
+    if (indicatorEl) indicatorEl.innerText = `Slayt ${currentSlideIdx} / ${currentSlideMax}`;
+    
+    // Update fullscreen container
+    const fsImgEl = document.getElementById('fullscreenSlideImage');
+    if (fsImgEl) fsImgEl.src = imgPath;
+    
+    const fsIndicatorEl = document.getElementById('fullscreenSlideIndicator');
+    if (fsIndicatorEl) fsIndicatorEl.innerText = `Slayt ${currentSlideIdx} / ${currentSlideMax}`;
+    
+    // Update dots
+    renderSlideDots();
+  }
+
+  function renderSlideDots() {
+    const dotsContainer = document.getElementById('slideDots');
+    if (!dotsContainer) return;
+    dotsContainer.innerHTML = '';
+    
+    for (let i = 1; i <= currentSlideMax; i++) {
+      const dot = document.createElement('button');
+      dot.className = 'slide-dot' + (i === currentSlideIdx ? ' active' : '');
+      dot.setAttribute('title', `Slayt ${i}`);
+      dot.onclick = () => {
+        currentSlideIdx = i;
+        updateSlideDisplay();
+      };
+      dotsContainer.appendChild(dot);
+    }
+  }
+
+  function nextSlide(event) {
+    if (event) event.stopPropagation();
+    if (!currentSlideKey) return;
+    if (currentSlideIdx < currentSlideMax) {
+      currentSlideIdx++;
+    } else {
+      currentSlideIdx = 1; // loop back to first page
+    }
+    updateSlideDisplay();
+  }
+
+  function prevSlide(event) {
+    if (event) event.stopPropagation();
+    if (!currentSlideKey) return;
+    if (currentSlideIdx > 1) {
+      currentSlideIdx--;
+    } else {
+      currentSlideIdx = currentSlideMax; // loop back to last page
+    }
+    updateSlideDisplay();
+  }
+
+  function toggleSlidesContent() {
+    const content = document.getElementById('slidesContentArea');
+    if (!content) return;
+    content.style.display = (content.style.display === 'none') ? 'block' : 'none';
+  }
+
+  function openFullScreenSlides(event) {
+    if (event) event.stopPropagation();
+    const overlay = document.getElementById('fullscreenSlideOverlay');
+    if (overlay) {
+      overlay.style.display = 'flex';
+      // Disable body scrolling while full screen is active
+      document.body.style.overflow = 'hidden';
+    }
+  }
+
+  function closeFullScreenSlides(event) {
+    if (event) event.stopPropagation();
+    const overlay = document.getElementById('fullscreenSlideOverlay');
+    if (overlay) {
+      overlay.style.display = 'none';
+      // Re-enable body scrolling
+      document.body.style.overflow = '';
+    }
+  }
+
+  // Keyboard navigation for slides
+  document.addEventListener('keydown', function(e) {
+    const overlay = document.getElementById('fullscreenSlideOverlay');
+    const isOverlayActive = overlay && overlay.style.display === 'flex';
+    
+    // We only trigger keyboard navigation when overlay is active 
+    // or when slidesCard is visible and user is not focused on an input
+    const isSearchFocused = document.activeElement && document.activeElement.id === 'searchInput';
+    const slidesCardVisible = document.getElementById('slidesCard') && document.getElementById('slidesCard').style.display === 'block';
+    
+    if (isOverlayActive || (slidesCardVisible && !isSearchFocused)) {
+      if (e.key === 'ArrowRight') {
+        nextSlide();
+      } else if (e.key === 'ArrowLeft') {
+        prevSlide();
+      } else if (e.key === 'Escape' && isOverlayActive) {
+        closeFullScreenSlides();
+      }
+    }
+  });
 </script>
+
+<!-- Fullscreen Slide Overlay -->
+<div id="fullscreenSlideOverlay" class="fullscreen-overlay" onclick="closeFullScreenSlides()">
+  <button class="fullscreen-close" onclick="closeFullScreenSlides(event)">&times;</button>
+  <div class="fullscreen-frame" onclick="event.stopPropagation()">
+    <button class="fullscreen-nav-btn" style="left: 24px;" onclick="prevSlide(event)">&larr;</button>
+    <img id="fullscreenSlideImage" src="" alt="Slayt" class="fullscreen-img" />
+    <button class="fullscreen-nav-btn" style="right: 24px;" onclick="nextSlide(event)">&rarr;</button>
+  </div>
+  <div class="slide-indicator" id="fullscreenSlideIndicator" style="color:white; font-size:14px; margin-top: 10px;">Slayt 1 / 10</div>
+</div>
 
 </body>
 </html>
