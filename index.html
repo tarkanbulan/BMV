@@ -1184,6 +1184,24 @@
           </div>
         </div>
 
+        <!-- Audio Player Panel -->
+        <div id="audioCard" class="interactive-diagram-card" style="display: none; border-color: var(--gold);">
+          <div class="diagram-title">
+            <span style="color: var(--gold); display: flex; align-items: center; gap: 6px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+              SESLİ KİTAP (AUDIOBOOK)
+            </span>
+            <button class="diagram-toggle-btn" id="audioToggleBtn" onclick="toggleAudioContent()">Gizle / Göster</button>
+          </div>
+          <div class="diagram-content" id="audioContentArea" style="padding: 10px 0 0;">
+            <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+              <audio id="audioPlayer" controls style="width: 100%; outline: none;" preload="none">
+                Tarayıcınız ses öğesini desteklemiyor.
+              </audio>
+            </div>
+          </div>
+        </div>
+
         <!-- Interactive Diagrams Panel (Embeds dynamically based on chapters) -->
         <div id="diagramCard" class="interactive-diagram-card" style="display: none;">
           <div class="diagram-title">
@@ -1477,6 +1495,13 @@
       card.style.display = 'none';
       const slidesCard = document.getElementById('slidesCard');
       if (slidesCard) slidesCard.style.display = 'none';
+      const audioCard = document.getElementById('audioCard');
+      if (audioCard) audioCard.style.display = 'none';
+      const audioPlayer = document.getElementById('audioPlayer');
+      if (audioPlayer) {
+        audioPlayer.pause();
+        audioPlayer.src = '';
+      }
       prevBtn.disabled = true;
       nextBtn.disabled = totalChapters === 0;
       return;
@@ -1496,6 +1521,9 @@
     
     // Initialize slides for the chapter
     initSlidesForChapter(currentEdition, idx);
+    
+    // Initialize audio for the chapter
+    initAudioForChapter(currentEdition, idx);
 
     // Setup footnote listeners
     document.querySelectorAll('.footnote-ref').forEach(ref => {
@@ -2050,6 +2078,58 @@
       }
     }
   });
+
+  // ── Audio Player Logic ────────────────
+  const AUDIO_MAPS = {
+    'A': {
+      1: 'ch1',
+      2: 'ch2',
+      3: 'ch3',
+      4: 'ch4',
+      5: 'ch5',
+      6: 'ch6',
+      7: 'ch7',
+      8: 'ch8'
+    },
+    'B': {
+      0: 'ch1',
+      2: 'ch2',
+      3: 'ch3',
+      23: 'ch5',
+      25: 'ch8'
+    }
+  };
+
+  function initAudioForChapter(edition, chIdx) {
+    const card = document.getElementById('audioCard');
+    const player = document.getElementById('audioPlayer');
+    if (!card || !player) return;
+
+    const audioKey = AUDIO_MAPS[edition] && AUDIO_MAPS[edition][chIdx];
+    if (audioKey) {
+      player.pause();
+      player.src = `audio/${audioKey}.mp3`;
+      player.load();
+      card.style.display = 'block';
+    } else {
+      player.pause();
+      player.src = '';
+      card.style.display = 'none';
+    }
+  }
+
+  function toggleAudioContent() {
+    const content = document.getElementById('audioContentArea');
+    const btn = document.getElementById('audioToggleBtn');
+    if (!content) return;
+    if (content.style.display === 'none') {
+      content.style.display = 'block';
+      if (btn) btn.innerText = 'Gizle / Göster';
+    } else {
+      content.style.display = 'none';
+      if (btn) btn.innerText = 'Göster';
+    }
+  }
 </script>
 
 <!-- Fullscreen Slide Overlay -->
